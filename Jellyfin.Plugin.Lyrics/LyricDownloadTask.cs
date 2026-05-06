@@ -131,6 +131,7 @@ public class LyricDownloadTask : IScheduledTask
         var missingDownloadedCount = 0;
         var upgradedToSyncedCount = 0;
         var alreadySyncedSkippedCount = 0;
+        var dbDesyncSkippedCount = 0;
         var plainNoSyncedFoundCount = 0;
         var missingNoLyricsFoundCount = 0;
         var backoffSkippedCount = 0;
@@ -233,7 +234,12 @@ public class LyricDownloadTask : IScheduledTask
                             }
                         }
                     }
-                    else if ((existingLyrics is null && lyricInFileFound) || HasSyncedLyrics(existingLyrics!))
+                    else if (existingLyrics is null && lyricInFileFound)
+                    {
+                        dbDesyncSkippedCount++;
+                        stateMutations += ClearRetryState(retryState, itemKey);
+                    }
+                    else if (HasSyncedLyrics(existingLyrics!))
                     {
                         alreadySyncedSkippedCount++;
                         stateMutations += ClearRetryState(retryState, itemKey);
@@ -292,7 +298,7 @@ public class LyricDownloadTask : IScheduledTask
         }
 
         _logger.LogInformation(
-            "Lyrics task complete in {Elapsed}. Processed tracks: {ProcessedTrackCount}, visited items: {VisitedItemCount}/{TotalCount}, cap reached: {CapReached}, missing downloaded: {MissingDownloadedCount}, upgraded to synced: {UpgradedToSyncedCount}, already synced skipped: {AlreadySyncedSkippedCount}, missing with no lyrics found: {MissingNoLyricsFoundCount}, plain with no synced found: {PlainNoSyncedFoundCount}, backoff skipped: {BackoffSkippedCount}, pruned retry-state entries: {PrunedEntriesCount}, errors: {ErrorsCount}",
+            "Lyrics task complete in {Elapsed}. Processed tracks: {ProcessedTrackCount}, visited items: {VisitedItemCount}/{TotalCount}, cap reached: {CapReached}, missing downloaded: {MissingDownloadedCount}, upgraded to synced: {UpgradedToSyncedCount}, already synced skipped: {AlreadySyncedSkippedCount}, db-desync skipped: {DbDesyncSkippedCount}, missing with no lyrics found: {MissingNoLyricsFoundCount}, plain with no synced found: {PlainNoSyncedFoundCount}, backoff skipped: {BackoffSkippedCount}, pruned retry-state entries: {PrunedEntriesCount}, errors: {ErrorsCount}",
             stopwatch.Elapsed,
             processedTrackCount,
             visitedItemCount,
@@ -301,6 +307,7 @@ public class LyricDownloadTask : IScheduledTask
             missingDownloadedCount,
             upgradedToSyncedCount,
             alreadySyncedSkippedCount,
+            dbDesyncSkippedCount,
             missingNoLyricsFoundCount,
             plainNoSyncedFoundCount,
             backoffSkippedCount,
